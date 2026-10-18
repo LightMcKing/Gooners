@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Space Shooter Fix</title>
+    <title>Gooner Smasher Pure</title>
     <style>
         * {
             box-sizing: border-box;
@@ -65,7 +65,7 @@
         let screenShakeIntensity = 0;
 
         const player = {
-            x: 164, // 360 / 2 - 16
+            x: 164, 
             y: 460,
             width: 32,
             height: 32,
@@ -79,19 +79,8 @@
         let spawnTimer = 0;
         let lastTouchX = null;
 
-        // --- SAFE SYSTEM MOTOR CHECK ---
-        function triggerHaptic(duration) {
-            try {
-                if (navigator && typeof navigator.vibrate === "function") {
-                    navigator.vibrate(duration);
-                }
-            } catch(e) {}
-        }
-
-        // --- STREAMLINED RENDER BOUNDARY MAPPING ---
         function getCanvasTouchX(touch) {
             const rect = canvas.getBoundingClientRect();
-            // Fallback security checks for mobile view matrixing
             const clientX = touch.clientX || (touch.touches && touch.touches[0] ? touch.touches[0].clientX : 0);
             return ((clientX - rect.left) / (rect.right - rect.left)) * canvas.width;
         }
@@ -138,7 +127,6 @@
         });
 
         function fireLaser() {
-            triggerHaptic(12);
             lasers.push({
                 x: player.x + 14, 
                 y: player.y,
@@ -252,13 +240,12 @@
                 
                 ctx.fillStyle = "#00ffff";
                 ctx.font = "14px sans-serif";
-                ctx.fillText("TAP SCREEN TO DEDEPLOY HULL", canvas.width / 2, canvas.height / 2 + 75);
+                ctx.fillText("TAP SCREEN TO DEPLOY NEW HULL", canvas.width / 2, canvas.height / 2 + 75);
                 ctx.restore();
                 requestAnimationFrame(animate);
                 return;
             }
 
-            // 1. Particle Systems
             for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy;
@@ -273,6 +260,20 @@
             }
             ctx.globalAlpha = 1.0;
 
-            // 2. Weapon Processing
             for (let i = lasers.length - 1; i >= 0; i--) {
                 let l = lasers[i];
+                l.y -= l.speed;
+                ctx.fillStyle = l.color;
+                ctx.fillRect(l.x, l.y, l.width, l.height);
+                if (l.y < -20) lasers.splice(i, 1);
+            }
+
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.moveTo(player.x + 16, player.y);
+            ctx.lineTo(player.x, player.y + 32);
+            ctx.lineTo(player.x + 32, player.y + 32);
+            ctx.closePath();
+            ctx.fill();
+
+            spawnTimer++;
