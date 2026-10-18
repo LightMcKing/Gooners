@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Space Shooter Elite V3.1</title>
+    <title>Space Shooter Fix</title>
     <style>
         * {
             box-sizing: border-box;
@@ -16,7 +16,7 @@
             padding: 0;
             background-color: #03030f;
             color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -30,9 +30,6 @@
             letter-spacing: 3px;
             text-shadow: 0 0 10px #00ffff;
             color: #00ffff;
-        }
-        #gameWrapper {
-            position: relative;
         }
         #gameCanvas {
             border: 3px solid #00ffff;
@@ -55,9 +52,7 @@
 <body>
 
     <h1>GOONER SMASHER</h1>
-    <div id="gameWrapper">
-        <canvas id="gameCanvas" width="360" height="540"></canvas>
-    </div>
+    <canvas id="gameCanvas" width="360" height="540"></canvas>
     <div class="instructions">Left Side Drag: Move ship | Right Side Tap: Shoot Lasers<br>Defeat Jassy the Legendary Gooner!</div>
 
     <script>
@@ -70,8 +65,8 @@
         let screenShakeIntensity = 0;
 
         const player = {
-            x: canvas.width / 2 - 16,
-            y: canvas.height - 80,
+            x: 164, // 360 / 2 - 16
+            y: 460,
             width: 32,
             height: 32,
             color: "#00ffff"
@@ -84,10 +79,21 @@
         let spawnTimer = 0;
         let lastTouchX = null;
 
+        // --- SAFE SYSTEM MOTOR CHECK ---
         function triggerHaptic(duration) {
-            if ("vibrate" in navigator) {
-                navigator.vibrate(duration);
-            }
+            try {
+                if (navigator && typeof navigator.vibrate === "function") {
+                    navigator.vibrate(duration);
+                }
+            } catch(e) {}
+        }
+
+        // --- STREAMLINED RENDER BOUNDARY MAPPING ---
+        function getCanvasTouchX(touch) {
+            const rect = canvas.getBoundingClientRect();
+            // Fallback security checks for mobile view matrixing
+            const clientX = touch.clientX || (touch.touches && touch.touches[0] ? touch.touches[0].clientX : 0);
+            return ((clientX - rect.left) / (rect.right - rect.left)) * canvas.width;
         }
 
         canvas.addEventListener("touchstart", (e) => {
@@ -95,10 +101,10 @@
                 resetGame();
                 return;
             }
-            const rect = canvas.getBoundingClientRect();
+            
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
-                const touchCanvasX = ((touch.clientX - rect.left) / rect.width) * canvas.width;
+                const touchCanvasX = getCanvasTouchX(touch);
 
                 if (touchCanvasX < canvas.width / 2) {
                     lastTouchX = touchCanvasX;
@@ -111,15 +117,14 @@
         canvas.addEventListener("touchmove", (e) => {
             e.preventDefault();
             if (gameOver) return;
-            const rect = canvas.getBoundingClientRect();
             
             for (let i = 0; i < e.touches.length; i++) {
                 const touch = e.touches[i];
-                const touchCanvasX = ((touch.clientX - rect.left) / rect.width) * canvas.width;
+                const touchCanvasX = getCanvasTouchX(touch);
 
                 if (touchCanvasX < canvas.width / 2 && lastTouchX !== null) {
                     const deltaX = touchCanvasX - lastTouchX;
-                    player.x += deltaX * 1.6;
+                    player.x += deltaX * 1.5;
                     lastTouchX = touchCanvasX;
 
                     if (player.x < 0) player.x = 0;
@@ -129,18 +134,13 @@
         }, { passive: false });
 
         canvas.addEventListener("touchend", (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                const rect = canvas.getBoundingClientRect();
-                const touchCanvasX = ((touch.clientX - rect.left) / rect.width) * canvas.width;
-                if (touchCanvasX < canvas.width / 2) lastTouchX = null;
-            }
+            lastTouchX = null;
         });
 
         function fireLaser() {
             triggerHaptic(12);
             lasers.push({
-                x: player.x + player.width / 2 - 2, 
+                x: player.x + 14, 
                 y: player.y,
                 width: 4,
                 height: 16,
@@ -183,22 +183,16 @@
             let radius, hp, speedOffset, color, points, sides, name, isFinalBoss = false;
 
             if (roll < 0.40) {
-                // Weak
                 radius = 12; hp = 1; speedOffset = 3.8; color = "#ff5555"; points = 1; sides = 3; name = "mass the gay gooner";
             } else if (roll < 0.70) {
-                // Medium
                 radius = 18; hp = 2; speedOffset = 2.6; color = "#ffaa00"; points = 3; sides = 4; name = "George the secret gooner";
             } else if (roll < 0.88) {
-                // Above Medium
                 radius = 24; hp = 3; speedOffset = 2.0; color = "#ffff33"; points = 5; sides = 5; name = "West the og gooner";
             } else if (roll < 0.96) {
-                // Strong
                 radius = 30; hp = 5; speedOffset = 1.4; color = "#cc33ff"; points = 12; sides = 6; name = "phantom the serial gooner";
             } else if (roll < 0.99) {
-                // Boss Lvl
                 radius = 40; hp = 10; speedOffset = 1.0; color = "#33ff33"; points = 25; sides = 8; name = "Aura farmer the ultimate gooner";
             } else {
-                // Finale Boss Overhaul
                 radius = 52; hp = 25; speedOffset = 0.6; color = "#ffffff"; points = 100; sides = 10; name = "Jassy the legendary gooner";
                 isFinalBoss = true;
             }
@@ -226,32 +220,12 @@
             particles.length = 0;
             score = 0;
             speedMultiplier = 1;
-            player.x = canvas.width / 2 - 16;
+            player.x = 164;
             lastTouchX = null;
             gameOver = false;
-            animate();
         }
 
         function animate() {
-            if (gameOver) {
-                ctx.fillStyle = "rgba(5, 5, 15, 0.95)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = "#ff3366";
-                ctx.font = "bold 32px sans-serif";
-                ctx.textAlign = "center";
-                ctx.fillText("SYSTEM CRASHED", canvas.width / 2, canvas.height / 2 - 20);
-                
-                ctx.fillStyle = "white";
-                ctx.font = "18px sans-serif";
-                ctx.fillText(`Gooners Smashed Score: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
-                
-                ctx.fillStyle = "#00ffff";
-                ctx.font = "14px sans-serif";
-                ctx.fillText("TAP SCREEN TO TRY AGAIN", canvas.width / 2, canvas.height / 2 + 75);
-                return;
-            }
-
             ctx.save();
             if (screenShakeIntensity > 0) {
                 const dx = (Math.random() - 0.5) * screenShakeIntensity;
@@ -263,7 +237,28 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Particle Matrix Effects
+            if (gameOver) {
+                ctx.fillStyle = "rgba(5, 5, 15, 0.95)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = "#ff3366";
+                ctx.font = "bold 32px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("SYSTEM CRASHED", canvas.width / 2, canvas.height / 2 - 20);
+                
+                ctx.fillStyle = "white";
+                ctx.font = "18px sans-serif";
+                ctx.fillText(`Gooners Smashed: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+                
+                ctx.fillStyle = "#00ffff";
+                ctx.font = "14px sans-serif";
+                ctx.fillText("TAP SCREEN TO DEDEPLOY HULL", canvas.width / 2, canvas.height / 2 + 75);
+                ctx.restore();
+                requestAnimationFrame(animate);
+                return;
+            }
+
+            // 1. Particle Systems
             for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy;
@@ -274,3 +269,10 @@
                 }
                 ctx.fillStyle = p.color;
                 ctx.globalAlpha = p.alpha;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            }
+            ctx.globalAlpha = 1.0;
+
+            // 2. Weapon Processing
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                let l = lasers[i];
